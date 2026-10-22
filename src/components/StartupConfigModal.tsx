@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Modal,
   Platform,
@@ -8,12 +8,12 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
+} from "react-native";
 import {
   COLOR_PRESETS,
   ColorPreset,
   isValidHexColor,
-} from '@/constants/colors';
+} from "@/constants/colors";
 
 interface StartupConfigModalProps {
   visible: boolean;
@@ -44,7 +44,7 @@ export function StartupConfigModal({
   };
 
   const handleCustomHexChange = (value: string) => {
-    const formatted = value.startsWith('#') ? value : `#${value}`;
+    const formatted = value.startsWith("#") ? value : `#${value}`;
     setCustomHex(formatted);
     if (isValidHexColor(formatted)) {
       setHexError(false);
@@ -65,13 +65,10 @@ export function StartupConfigModal({
         <View style={[styles.card, { borderColor: selectedColor }]}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.badge, { color: selectedColor }]}>
-              DIGICLOCK // SYSTEM SYNC
-            </Text>
             <Text style={styles.title}>
               {isInitialStartup
-                ? 'Configure Display Colour'
-                : 'Display Settings'}
+                ? "Configure Display Colour"
+                : "Display Settings"}
             </Text>
             <Text style={styles.subtitle}>
               Choose your LED segment colour and clock format before launching
@@ -123,7 +120,7 @@ export function StartupConfigModal({
                       styles.presetItem,
                       isSelected && {
                         borderColor: preset.hex,
-                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        backgroundColor: "rgba(255, 255, 255, 0.08)",
                       },
                       pressed && styles.pressed,
                     ]}
@@ -139,7 +136,9 @@ export function StartupConfigModal({
                     />
                     <View style={styles.presetTextContainer}>
                       <Text style={styles.presetName}>{preset.name}</Text>
-                      <Text style={styles.presetDesc}>{preset.description}</Text>
+                      <Text style={styles.presetDesc}>
+                        {preset.description}
+                      </Text>
                     </View>
                   </Pressable>
                 );
@@ -164,10 +163,7 @@ export function StartupConfigModal({
                     placeholderTextColor="#555"
                     maxLength={7}
                     autoCapitalize="characters"
-                    style={[
-                      styles.hexInput,
-                      hexError && styles.hexInputError,
-                    ]}
+                    style={[styles.hexInput, hexError && styles.hexInputError]}
                   />
                 </View>
               </View>
@@ -230,8 +226,8 @@ export function StartupConfigModal({
           >
             <Text style={styles.launchButtonText}>
               {isInitialStartup
-                ? 'LAUNCH FULLSCREEN CLOCK'
-                : 'APPLY & RETURN TO CLOCK'}
+                ? "LAUNCH FULLSCREEN CLOCK"
+                : "APPLY & RETURN TO CLOCK"}
             </Text>
           </Pressable>
         </View>
@@ -243,20 +239,20 @@ export function StartupConfigModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.88)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.88)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   card: {
-    width: '100%',
+    width: "100%",
     maxWidth: 540,
-    maxHeight: '92%',
-    backgroundColor: '#0A0A0A',
+    maxHeight: "92%",
+    backgroundColor: "#0A0A0A",
     borderRadius: 16,
     borderWidth: 1.5,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.8,
     shadowRadius: 24,
@@ -267,34 +263,34 @@ const styles = StyleSheet.create({
   },
   badge: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 2,
     marginBottom: 4,
   },
   title: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 4,
   },
   subtitle: {
-    color: '#999999',
+    color: "#999999",
     fontSize: 13,
     lineHeight: 18,
   },
   previewBox: {
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
     borderWidth: 1,
-    borderColor: '#222222',
+    borderColor: "#222222",
     borderRadius: 12,
     paddingVertical: 18,
     paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 18,
   },
   previewTime: {
-    fontFamily: 'DSEG7Classic-BoldItalic',
+    fontFamily: "DSEG7Classic-BoldItalic",
     fontSize: 36,
     letterSpacing: 2,
     marginBottom: 10,
@@ -302,7 +298,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 10,
   },
   previewDate: {
-    fontFamily: 'DSEG14Classic-Italic',
+    fontFamily: "DSEG14Classic-Italic",
     fontSize: 13,
     letterSpacing: 1.5,
     textShadowOffset: { width: 0, height: 0 },
@@ -312,26 +308,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionLabel: {
-    color: '#777777',
+    color: "#777777",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 1.2,
     marginBottom: 10,
   },
   presetGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
     marginBottom: 18,
   },
   presetItem: {
-    width: '48%',
+    width: "48%",
     flexGrow: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#121212',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#121212",
     borderWidth: 1.5,
-    borderColor: '#262626',
+    borderColor: "#262626",
     borderRadius: 10,
     padding: 10,
   },
@@ -348,18 +344,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   presetName: {
-    color: '#F0F0F0',
+    color: "#F0F0F0",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   presetDesc: {
-    color: '#777777',
+    color: "#777777",
     fontSize: 10,
     marginTop: 1,
   },
   rowSection: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 14,
     marginBottom: 6,
   },
@@ -368,11 +364,11 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   hexInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#121212',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#121212",
     borderWidth: 1.5,
-    borderColor: '#262626',
+    borderColor: "#262626",
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 42,
@@ -385,51 +381,51 @@ const styles = StyleSheet.create({
   },
   hexInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontWeight: "600",
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   hexInputError: {
-    color: '#FF4444',
+    color: "#FF4444",
   },
   formatContainer: {
     flex: 1,
     minWidth: 180,
   },
   formatToggleGroup: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     height: 42,
   },
   formatBtn: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: "#121212",
     borderWidth: 1.5,
-    borderColor: '#262626',
+    borderColor: "#262626",
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   formatBtnText: {
-    color: '#AAAAAA',
+    color: "#AAAAAA",
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.8,
   },
   formatBtnTextActive: {
-    color: '#000000',
+    color: "#000000",
   },
   launchButton: {
     height: 48,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   launchButtonText: {
-    color: '#000000',
+    color: "#000000",
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 1.2,
   },
   pressed: {
