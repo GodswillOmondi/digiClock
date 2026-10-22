@@ -1,18 +1,69 @@
 {
-  "name": "digiclock-temp",
+  "name": "digiclock",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Fullscreen Digital Clock for Desktop and Mobile",
+  "author": "Godswill",
+  "main": "expo-router/entry",
   "dependencies": {
+    "@expo/metro-runtime": "~58.0.14",
+    "@types/react": "~19.3.0",
     "expo": "~58.0.16",
+    "expo-constants": "~58.0.12",
+    "expo-font": "~58.0.9",
+    "expo-keep-awake": "~58.0.3",
+    "expo-linking": "~58.0.13",
+    "expo-router": "~58.0.24",
     "expo-status-bar": "~58.0.3",
     "react": "19.3.0",
-    "react-native": "0.88.0"
+    "react-dom": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "react-native-web": "^0.21.4",
+    "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
+    "mobile:tunnel": "expo start --tunnel",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "lint": "expo lint",
+    "apk:build": "npx eas-cli@latest build -p android --profile preview",
+    "desktop:export": "expo export -p web",
+    "desktop:build:win": "expo export -p web && electron-builder --win --x64 --dir && mkdir -p /mnt/c/Users/godsw/Desktop/DigiClock && cp -r release/win-unpacked/* /mnt/c/Users/godsw/Desktop/DigiClock/"
   },
-  "private": true
+  "build": {
+    "appId": "com.godswill.digiclock",
+    "productName": "DigiClock",
+    "asar": true,
+    "asarUnpack": [
+      "dist/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "!node_modules/**/*"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "win": {
+      "target": [
+        "dir"
+      ],
+      "icon": "assets/icon.png"
+    }
+  },
+  "private": true,
+  "devDependencies": {
+    "@expo/ngrok": "^4.1.3",
+    "electron": "^44.9.2",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~58.0.4"
+  }
 }
