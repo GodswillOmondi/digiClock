@@ -30,13 +30,13 @@ A fullscreen digital desk clock for **Windows 10 Desktop** and **Android Mobile*
 
 ### 1. Windows 10 Native Desktop App (`DigiClock.exe`)
 
-From WSL2, build and copy the unpacked Windows executable directly to your Windows 10 Desktop (`C:\Users\godsw\Desktop\DigiClock\DigiClock.exe`):
+From WSL2, build and copy the unpacked Windows executable directly to your Windows 10 Desktop (`C:\Users\YOUR_NAME\Desktop\DigiClock\DigiClock.exe`):
 
 ```bash
 npm run desktop:build:win
 ```
 
-Then open `C:\Users\godsw\Desktop\DigiClock\DigiClock.exe` on Windows 10.
+Then open `C:\Users\YOUR_NAME\Desktop\DigiClock\DigiClock.exe` on Windows 10.
 
 - Press **`Escape`** to exit fullscreen (e.g. to move the window to another monitor).
 - Press **`F11`** to toggle fullscreen.
