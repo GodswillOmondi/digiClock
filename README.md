@@ -1,5 +1,7 @@
 # DigiClock
 
+![DigiClock](assets/image.png)
+
 A fullscreen digital desk clock for **Windows 10 Desktop** and **Android Mobile**, modeled after `assets/digiclock.png`.
 
 ## Features
@@ -25,6 +27,7 @@ A fullscreen digital desk clock for **Windows 10 Desktop** and **Android Mobile*
 ## Running & Building
 
 ### 1. Windows 10 Native Desktop App (`DigiClock.exe`)
+
 From WSL2, build and copy the unpacked Windows executable directly to your Windows 10 Desktop (`C:\Users\godsw\Desktop\DigiClock\DigiClock.exe`):
 
 ```bash
@@ -32,10 +35,12 @@ npm run desktop:build:win
 ```
 
 Then open `C:\Users\godsw\Desktop\DigiClock\DigiClock.exe` on Windows 10.
+
 - Press **`Escape`** to exit fullscreen (e.g. to move the window to another monitor).
 - Press **`F11`** to toggle fullscreen.
 
 ### 2. Android Phone
+
 - **Instant via Expo Go (over WSL2 Tunnel)**:
   ```bash
   npm run mobile:tunnel
@@ -47,6 +52,7 @@ Then open `C:\Users\godsw\Desktop\DigiClock\DigiClock.exe` on Windows 10.
   ```
 
 ### 3. Web Browser (Development)
+
 ```bash
 npm run web
 ```
