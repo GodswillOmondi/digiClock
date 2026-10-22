@@ -1,6 +1,8 @@
 # DigiClock
 
-![DigiClock](assets/image.png)
+![DigiClock](assets/full.png)
+
+![DigiClock](assets/config.png)
 
 A fullscreen digital desk clock for **Windows 10 Desktop** and **Android Mobile**, modeled after `assets/digiclock.png`.
 
