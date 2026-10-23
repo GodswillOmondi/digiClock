@@ -17,8 +17,10 @@
 
 - `src/app/_layout.tsx` — Root Expo Router layout, loads `DSEG7` & `DSEG14` fonts, hides status bar.
 - `src/app/index.tsx` — Main screen state (color, 12h/24h, auto-hide timer, Web & Electron fullscreen bridge).
-- `src/components/DigitalClockDisplay.tsx` — Fullscreen clock UI, 75% width responsive typography, top-right quick bar.
+- `src/components/DigitalClockDisplay.tsx` — Fullscreen clock UI, responsive typography, top-right quick bar.
+- `src/components/VideoSplashScreen.tsx` — Startup animated MP4 splash screen (`assets/digiclock-splash.mp4`) using `expo-video` with fade-out handoff and skip control.
 - `src/components/StartupConfigModal.tsx` — Startup LED color & format configuration modal.
+- `scripts/generate-icons.cjs` — Vector-to-PNG icon generator that rasterizes `assets/digiclock-1.svg` into all Expo, Android Adaptive, Web favicon, and Windows Electron icon assets.
 - `src/hooks/useSystemClock.ts` — Millisecond-aligned system clock synchronization hook.
 - `src/constants/colors.ts` — Classic LED color presets and hex validation.
 - `electron/main.cjs` & `electron/preload.cjs` — Native Windows desktop wrapper (local loopback static server for `dist/`, fullscreen management, `F11`/`Escape` shortcuts, display sleep blocker).

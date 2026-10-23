@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -65,15 +66,21 @@ export function StartupConfigModal({
         <View style={[styles.card, { borderColor: selectedColor }]}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>
-              {isInitialStartup
-                ? "Configure Display Colour"
-                : "Display Settings"}
-            </Text>
-            <Text style={styles.subtitle}>
-              Choose your LED segment colour and clock format before launching
-              fullscreen.
-            </Text>
+            <Image
+              source={require("../../assets/icon.png")}
+              style={styles.logo}
+            />
+            <View style={styles.headerText}>
+              <Text style={styles.title}>
+                {isInitialStartup
+                  ? "Configure Display Colour"
+                  : "Display Settings"}
+              </Text>
+              <Text style={styles.subtitle}>
+                Choose your LED segment colour and clock format before launching
+                fullscreen.
+              </Text>
+            </View>
           </View>
 
           {/* Live Mini Preview */}
@@ -259,7 +266,18 @@ const styles = StyleSheet.create({
     elevation: 16,
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
+  },
+  logo: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    marginRight: 14,
+  },
+  headerText: {
+    flex: 1,
   },
   badge: {
     fontSize: 11,

@@ -3,6 +3,9 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
+// Allow startup splash video to autoplay with audio in Electron desktop
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 let mainWindow = null;
 let powerBlockerId = null;
 let staticServer = null;
@@ -17,6 +20,8 @@ const MIME_TYPES = {
   '.jpeg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
   '.ttf': 'font/ttf',
   '.otf': 'font/otf',
   '.woff': 'font/woff',
@@ -59,6 +64,29 @@ function startLocalStaticServer(distDir) {
 
         const ext = path.extname(filePath).toLowerCase();
         const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+        const stat = fs.statSync(filePath);
+        const fileSize = stat.size;
+        const range = req.headers.range;
+
+        if (range) {
+          const parts = range.replace(/bytes=/, '').split('-');
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+          if (start >= fileSize || end >= fileSize) {
+            res.writeHead(416, { 'Content-Range': `bytes */${fileSize}` });
+            res.end();
+            return;
+          }
+          const chunkSize = end - start + 1;
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunkSize,
+            'Content-Type': contentType,
+          });
+          fs.createReadStream(filePath, { start, end }).pipe(res);
+          return;
+        }
 
         fs.readFile(filePath, (err, content) => {
           if (err) {
@@ -66,7 +94,11 @@ function startLocalStaticServer(distDir) {
             res.end('Not found');
             return;
           }
-          res.writeHead(200, { 'Content-Type': contentType });
+          res.writeHead(200, {
+            'Content-Type': contentType,
+            'Content-Length': fileSize,
+            'Accept-Ranges': 'bytes',
+          });
           res.end(content);
         });
       } catch {

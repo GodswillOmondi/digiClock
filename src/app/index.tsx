@@ -10,6 +10,7 @@ import {
 import { useSystemClock } from '@/hooks/useSystemClock';
 import { DigitalClockDisplay } from '@/components/DigitalClockDisplay';
 import { StartupConfigModal } from '@/components/StartupConfigModal';
+import { VideoSplashScreen } from '@/components/VideoSplashScreen';
 
 interface ElectronBridge {
   toggleFullscreen: () => Promise<boolean>;
@@ -53,6 +54,7 @@ export default function ClockScreen() {
   const [use24Hour, setUse24Hour] = useState<boolean>(
     params.format === '12' ? false : true
   );
+  const [splashVisible, setSplashVisible] = useState<boolean>(true);
   const [configModalVisible, setConfigModalVisible] = useState<boolean>(true);
   const [isInitialStartup, setIsInitialStartup] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -198,7 +200,7 @@ export default function ClockScreen() {
       />
 
       <StartupConfigModal
-        visible={configModalVisible}
+        visible={!splashVisible && configModalVisible}
         selectedColor={selectedColor}
         use24Hour={use24Hour}
         onSelectColor={setSelectedColor}
@@ -206,6 +208,10 @@ export default function ClockScreen() {
         onStartClock={handleStartClock}
         isInitialStartup={isInitialStartup}
       />
+
+      {splashVisible && (
+        <VideoSplashScreen onFinish={() => setSplashVisible(false)} />
+      )}
     </View>
   );
 }

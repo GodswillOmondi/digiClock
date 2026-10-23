@@ -13,7 +13,9 @@
     "expo-keep-awake": "~58.0.3",
     "expo-linking": "~58.0.13",
     "expo-router": "~58.0.24",
+    "expo-splash-screen": "~58.0.11",
     "expo-status-bar": "~58.0.3",
+    "expo-video": "~58.0.12",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.0",
@@ -29,6 +31,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "icons:generate": "node scripts/generate-icons.cjs",
     "apk:build": "npx eas-cli@latest build -p android --profile preview",
     "desktop:export": "expo export -p web",
     "desktop:build:win": "expo export -p web && electron-builder --win --x64 --dir && mkdir -p /mnt/c/Users/godsw/Desktop/DigiClock && cp -r release/win-unpacked/* /mnt/c/Users/godsw/Desktop/DigiClock/"

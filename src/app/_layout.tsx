@@ -2,7 +2,11 @@ import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+
+// Keep native OS splash screen visible until custom fonts and video splash mount
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -20,6 +24,12 @@ export default function RootLayout() {
       document.body.style.overflow = 'hidden';
     }
   }, []);
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded]);
 
   if (!fontsLoaded) {
     return <View style={styles.loadingContainer} />;
