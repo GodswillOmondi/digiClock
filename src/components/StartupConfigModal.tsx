@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import {
   COLOR_PRESETS,
@@ -35,6 +36,9 @@ export function StartupConfigModal({
   onStartClock,
   isInitialStartup,
 }: StartupConfigModalProps) {
+  const { height } = useWindowDimensions();
+  const compact = height < 500;
+  const [step, setStep] = useState<"colour" | "format">("colour");
   const [customHex, setCustomHex] = useState(selectedColor);
   const [hexError, setHexError] = useState(false);
 
@@ -61,14 +65,29 @@ export function StartupConfigModal({
       transparent
       animationType="fade"
       onRequestClose={onStartClock}
+      onShow={() => {
+        setStep("colour");
+        setCustomHex(selectedColor);
+        setHexError(false);
+      }}
     >
       <View style={styles.backdrop}>
-        <View style={[styles.card, { borderColor: selectedColor }]}>
+        <View
+          style={[
+            styles.card,
+            {
+              borderColor: selectedColor,
+              height: Math.min(height - 24, 680),
+              padding: compact ? 14 : 24,
+              borderRadius: compact ? 12 : 16,
+            },
+          ]}
+        >
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, compact && styles.headerCompact]}>
             <Image
               source={require("../../assets/icon.png")}
-              style={styles.logo}
+              style={[styles.logo, compact && styles.logoCompact]}
             />
             <View style={styles.headerText}>
               <Text style={styles.title}>
@@ -77,166 +96,204 @@ export function StartupConfigModal({
                   : "Display Settings"}
               </Text>
               <Text style={styles.subtitle}>
-                Choose your LED segment colour and clock format before launching
-                fullscreen.
+                {step === "colour"
+                  ? "Step 1 of 2 · Choose an LED segment colour."
+                  : "Step 2 of 2 · Choose your clock format and review."}
               </Text>
             </View>
           </View>
 
-          {/* Live Mini Preview */}
-          <View style={styles.previewBox}>
-            <Text
-              style={[
-                styles.previewTime,
-                {
-                  color: selectedColor,
-                  textShadowColor: selectedColor,
-                },
-              ]}
-            >
-              01:46:41
-            </Text>
-            <Text
-              style={[
-                styles.previewDate,
-                {
-                  color: selectedColor,
-                  textShadowColor: selectedColor,
-                },
-              ]}
-            >
-              WED - OCT 21, 2026
-            </Text>
-          </View>
-
           <ScrollView
-            style={styles.scrollArea}
+            style={styles.stepContent}
+            contentContainerStyle={styles.stepContentContainer}
             showsVerticalScrollIndicator={false}
           >
-            {/* Preset Colors */}
-            <Text style={styles.sectionLabel}>LED COLOUR PRESETS</Text>
-            <View style={styles.presetGrid}>
-              {COLOR_PRESETS.map((preset) => {
-                const isSelected =
-                  selectedColor.toUpperCase() === preset.hex.toUpperCase();
-                return (
-                  <Pressable
-                    key={preset.id}
-                    onPress={() => handlePresetPress(preset)}
-                    style={({ pressed }) => [
-                      styles.presetItem,
-                      isSelected && {
-                        borderColor: preset.hex,
-                        backgroundColor: "rgba(255, 255, 255, 0.08)",
-                      },
-                      pressed && styles.pressed,
-                    ]}
-                  >
+            {step === "colour" ? (
+              <>
+                <Text style={styles.sectionLabel}>LED COLOUR PRESETS</Text>
+                <View style={styles.presetGrid}>
+                  {COLOR_PRESETS.map((preset) => {
+                    const isSelected =
+                      selectedColor.toUpperCase() === preset.hex.toUpperCase();
+                    return (
+                      <Pressable
+                        key={preset.id}
+                        onPress={() => handlePresetPress(preset)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isSelected }}
+                        accessibilityLabel={`${preset.name}, ${preset.description}`}
+                        style={({ pressed }) => [
+                          styles.presetItem,
+                          isSelected && {
+                            borderColor: preset.hex,
+                            backgroundColor: "rgba(255, 255, 255, 0.08)",
+                          },
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.swatch,
+                            {
+                              backgroundColor: preset.hex,
+                              shadowColor: preset.hex,
+                            },
+                          ]}
+                        />
+                        <View style={styles.presetTextContainer}>
+                          <Text style={styles.presetName}>{preset.name}</Text>
+                          <Text style={styles.presetDesc}>
+                            {preset.description}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <View style={styles.customHexContainer}>
+                  <Text style={styles.sectionLabel}>CUSTOM HEX COLOUR</Text>
+                  <View style={styles.hexInputWrapper}>
                     <View
                       style={[
-                        styles.swatch,
-                        {
-                          backgroundColor: preset.hex,
-                          shadowColor: preset.hex,
-                        },
+                        styles.hexPreviewDot,
+                        { backgroundColor: selectedColor },
                       ]}
                     />
-                    <View style={styles.presetTextContainer}>
-                      <Text style={styles.presetName}>{preset.name}</Text>
-                      <Text style={styles.presetDesc}>
-                        {preset.description}
+                    <TextInput
+                      value={customHex}
+                      onChangeText={handleCustomHexChange}
+                      placeholder="#E6E600"
+                      placeholderTextColor="#555"
+                      maxLength={7}
+                      autoCapitalize="characters"
+                      accessibilityLabel="Custom hex colour"
+                      style={[
+                        styles.hexInput,
+                        hexError && styles.hexInputError,
+                      ]}
+                    />
+                  </View>
+                  {hexError && (
+                    <Text style={styles.hexErrorText} accessibilityRole="alert">
+                      Enter a valid hex colour.
+                    </Text>
+                  )}
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.previewBox}>
+                  <Text
+                    style={[
+                      styles.previewTime,
+                      {
+                        color: selectedColor,
+                        textShadowColor: selectedColor,
+                      },
+                    ]}
+                  >
+                    01:46:41
+                  </Text>
+                  <Text
+                    style={[
+                      styles.previewDate,
+                      {
+                        color: selectedColor,
+                        textShadowColor: selectedColor,
+                      },
+                    ]}
+                  >
+                    WED - OCT 21, 2026
+                  </Text>
+                </View>
+
+                <View style={styles.formatContainer}>
+                  <Text style={styles.sectionLabel}>TIME FORMAT</Text>
+                  <View style={styles.formatToggleGroup}>
+                    <Pressable
+                      onPress={() => onToggle24Hour(true)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: use24Hour }}
+                      style={[
+                        styles.formatBtn,
+                        use24Hour && {
+                          backgroundColor: selectedColor,
+                          borderColor: selectedColor,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.formatBtnText,
+                          use24Hour && styles.formatBtnTextActive,
+                        ]}
+                      >
+                        24-HOUR
                       </Text>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* Custom Hex Input */}
-            <View style={styles.rowSection}>
-              <View style={styles.customHexContainer}>
-                <Text style={styles.sectionLabel}>CUSTOM HEX COLOUR</Text>
-                <View style={styles.hexInputWrapper}>
-                  <View
-                    style={[
-                      styles.hexPreviewDot,
-                      { backgroundColor: selectedColor },
-                    ]}
-                  />
-                  <TextInput
-                    value={customHex}
-                    onChangeText={handleCustomHexChange}
-                    placeholder="#E6E600"
-                    placeholderTextColor="#555"
-                    maxLength={7}
-                    autoCapitalize="characters"
-                    style={[styles.hexInput, hexError && styles.hexInputError]}
-                  />
-                </View>
-              </View>
-
-              {/* Time Format Toggle */}
-              <View style={styles.formatContainer}>
-                <Text style={styles.sectionLabel}>TIME FORMAT</Text>
-                <View style={styles.formatToggleGroup}>
-                  <Pressable
-                    onPress={() => onToggle24Hour(true)}
-                    style={[
-                      styles.formatBtn,
-                      use24Hour && {
-                        backgroundColor: selectedColor,
-                        borderColor: selectedColor,
-                      },
-                    ]}
-                  >
-                    <Text
+                    </Pressable>
+                    <Pressable
+                      onPress={() => onToggle24Hour(false)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: !use24Hour }}
                       style={[
-                        styles.formatBtnText,
-                        use24Hour && styles.formatBtnTextActive,
+                        styles.formatBtn,
+                        !use24Hour && {
+                          backgroundColor: selectedColor,
+                          borderColor: selectedColor,
+                        },
                       ]}
                     >
-                      24-HOUR
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => onToggle24Hour(false)}
-                    style={[
-                      styles.formatBtn,
-                      !use24Hour && {
-                        backgroundColor: selectedColor,
-                        borderColor: selectedColor,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.formatBtnText,
-                        !use24Hour && styles.formatBtnTextActive,
-                      ]}
-                    >
-                      12-HOUR
-                    </Text>
-                  </Pressable>
+                      <Text
+                        style={[
+                          styles.formatBtnText,
+                          !use24Hour && styles.formatBtnTextActive,
+                        ]}
+                      >
+                        12-HOUR
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
-              </View>
-            </View>
+              </>
+            )}
           </ScrollView>
 
-          {/* Launch Button */}
-          <Pressable
-            onPress={onStartClock}
-            style={({ pressed }) => [
-              styles.launchButton,
-              { backgroundColor: selectedColor },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.launchButtonText}>
-              {isInitialStartup
-                ? "LAUNCH FULLSCREEN CLOCK"
-                : "APPLY & RETURN TO CLOCK"}
-            </Text>
-          </Pressable>
+          <View style={styles.footer}>
+            {step === "format" && (
+              <Pressable
+                onPress={() => setStep("colour")}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.backButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.backButtonText}>BACK</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={
+                step === "colour"
+                  ? () => setStep("format")
+                  : onStartClock
+              }
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.launchButton,
+                { backgroundColor: selectedColor },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.launchButtonText}>
+                {step === "colour"
+                  ? "NEXT: TIME FORMAT"
+                  : isInitialStartup
+                    ? "LAUNCH FULLSCREEN CLOCK"
+                    : "APPLY & RETURN TO CLOCK"}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -249,12 +306,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.88)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 12,
   },
   card: {
     width: "100%",
-    maxWidth: 540,
-    maxHeight: "92%",
+    maxWidth: 640,
     backgroundColor: "#0A0A0A",
     borderRadius: 16,
     borderWidth: 1.5,
@@ -270,11 +326,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  headerCompact: {
+    marginBottom: 8,
+  },
   logo: {
     width: 48,
     height: 48,
     borderRadius: 10,
     marginRight: 14,
+  },
+  logoCompact: {
+    width: 38,
+    height: 38,
+    marginRight: 10,
   },
   headerText: {
     flex: 1,
@@ -295,6 +359,14 @@ const styles = StyleSheet.create({
     color: "#999999",
     fontSize: 13,
     lineHeight: 18,
+  },
+  stepContent: {
+    flex: 1,
+    minHeight: 0,
+  },
+  stepContentContainer: {
+    flexGrow: 1,
+    paddingBottom: 8,
   },
   previewBox: {
     backgroundColor: "#000000",
@@ -322,9 +394,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 6,
   },
-  scrollArea: {
-    marginBottom: 16,
-  },
   sectionLabel: {
     color: "#777777",
     fontSize: 11,
@@ -335,12 +404,13 @@ const styles = StyleSheet.create({
   presetGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
     marginBottom: 18,
   },
   presetItem: {
-    width: "48%",
+    width: "49%",
     flexGrow: 1,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#121212",
@@ -371,15 +441,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 1,
   },
-  rowSection: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 14,
-    marginBottom: 6,
-  },
   customHexContainer: {
-    flex: 1,
-    minWidth: 180,
+    width: "100%",
   },
   hexInputWrapper: {
     flexDirection: "row",
@@ -406,6 +469,11 @@ const styles = StyleSheet.create({
   },
   hexInputError: {
     color: "#FF4444",
+  },
+  hexErrorText: {
+    color: "#FF6666",
+    fontSize: 11,
+    marginTop: 5,
   },
   formatContainer: {
     flex: 1,
@@ -434,7 +502,30 @@ const styles = StyleSheet.create({
   formatBtnTextActive: {
     color: "#000000",
   },
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingTop: 10,
+  },
+  backButton: {
+    minWidth: 76,
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#444444",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  backButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
   launchButton: {
+    flex: 1,
     height: 48,
     borderRadius: 10,
     alignItems: "center",
