@@ -62,39 +62,44 @@ export default function StopwatchScreen() {
   };
 
   return (
-    <ClockToolLayout title="STOPWATCH" subtitle="ELAPSED TIME · LAP RECORDING">
-      <View style={styles.body}>
-        <Text style={[toolStyles.time, styles.time]}>{clockText}</Text>
-        <Text style={styles.status}>{status.toUpperCase()}</Text>
-        <View style={toolStyles.buttonRow}>
-          {status === 'running' ? (
-            <ToolButton label="PAUSE" onPress={pause} />
-          ) : (
-            <ToolButton label={status === 'paused' ? 'RESUME' : 'START'} onPress={start} />
-          )}
-          {status !== 'idle' && <ToolButton label="LAP" secondary onPress={recordLap} />}
-          <ToolButton label="RESET" secondary onPress={reset} />
-        </View>
-        <View style={styles.lapList}>
-          {laps.length === 0 ? (
-            <Text style={styles.empty}>LAPS WILL APPEAR HERE</Text>
-          ) : (
-            <FlatList
-              data={laps}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item, index }) => (
-                <View style={styles.lapRow}>
-                  <Text style={styles.lapLabel}>LAP {laps.length - index}</Text>
-                  <Text style={styles.split}>{formatElapsed(item.split, item.split >= 3_600_000)}</Text>
-                  <Text style={styles.lapTime}>{formatElapsed(item.elapsed, item.elapsed >= 3_600_000)}</Text>
-                </View>
+    <ClockToolLayout title="STOPWATCH" subtitle="ELAPSED TIME · LAP RECORDING"
+      renderFace={({ fontSize, controlsVisible }) => (
+        <View style={styles.body}>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[toolStyles.time, { fontSize: clockText.length > 8 ? fontSize * 0.72 : fontSize }]}>{clockText}</Text>
+          <Text style={styles.status}>{status.toUpperCase()}</Text>
+          {controlsVisible && (
+            <View style={toolStyles.buttonRow}>
+              {status === 'running' ? (
+                <ToolButton label="PAUSE" onPress={pause} />
+              ) : (
+                <ToolButton label={status === 'paused' ? 'RESUME' : 'START'} onPress={start} />
               )}
-              initialNumToRender={5}
-              windowSize={5}
-            />
+              {status !== 'idle' && <ToolButton label="LAP" secondary onPress={recordLap} />}
+              <ToolButton label="RESET" secondary onPress={reset} />
+            </View>
           )}
+          <View style={styles.lapList}>
+            {laps.length === 0 ? (
+              <Text style={styles.empty}>LAPS WILL APPEAR HERE</Text>
+            ) : (
+              <FlatList
+                data={laps}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={({ item, index }) => (
+                  <View style={styles.lapRow}>
+                    <Text style={styles.lapLabel}>LAP {laps.length - index}</Text>
+                    <Text style={styles.split}>{formatElapsed(item.split, item.split >= 3_600_000)}</Text>
+                    <Text style={styles.lapTime}>{formatElapsed(item.elapsed, item.elapsed >= 3_600_000)}</Text>
+                  </View>
+                )}
+                initialNumToRender={5}
+                windowSize={5}
+              />
+            )}
+          </View>
         </View>
-      </View>
+      )}
+    >
     </ClockToolLayout>
   );
 }
@@ -108,10 +113,10 @@ function ToolButton({ label, onPress, secondary = false, disabled = false }: { l
 }
 
 const styles = StyleSheet.create({
-  body: { width: '100%', alignItems: 'center', flex: 1 },
+  body: { width: '100%', alignItems: 'center' },
   time: { fontSize: 52 },
   status: { color: toolColors.muted, fontSize: 10, letterSpacing: 2, marginTop: 10 },
-  lapList: { width: '100%', maxWidth: 520, flex: 1, marginTop: 20, borderTopWidth: 1, borderTopColor: toolColors.line },
+  lapList: { width: '100%', maxWidth: 520, height: 120, marginTop: 20, borderTopWidth: 1, borderTopColor: toolColors.line },
   empty: { color: 'rgba(255,255,255,0.34)', fontSize: 9, textAlign: 'center', letterSpacing: 1.5, marginTop: 18 },
   lapRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
   lapLabel: { color: toolColors.muted, flex: 1, fontSize: 10, letterSpacing: 1 },

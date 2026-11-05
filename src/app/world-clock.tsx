@@ -1,35 +1,48 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { ClockToolLayout, toolColors } from '@/components/ClockToolLayout';
+import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ClockToolLayout, toolColors, toolStyles } from '@/components/ClockToolLayout';
 import { WORLD_CLOCK_CITIES, WorldClockCity } from '@/constants/worldClocks';
+import { useClockPreferences } from '@/hooks/useClockPreferences';
 
 const STORAGE_KEY = 'digiclock.worldCities';
+const SELECTED_STORAGE_KEY = 'digiclock.selectedWorldCity';
 
 export default function WorldClockScreen() {
+  const { width } = useWindowDimensions();
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [now, setNow] = useState(() => new Date());
   const [loaded, setLoaded] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(true);
+  const { color, use24Hour } = useClockPreferences();
 
   useEffect(() => {
     let active = true;
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((value) => {
-        if (!active || !value) return;
-        const parsed: unknown = JSON.parse(value);
-        if (Array.isArray(parsed)) {
-          setSavedIds(parsed.filter((id): id is string => typeof id === 'string' && WORLD_CLOCK_CITIES.some((city) => city.id === id)));
-        }
-      })
-      .catch(() => {})
-      .finally(() => { if (active) setLoaded(true); });
+    Promise.all([
+      AsyncStorage.getItem(STORAGE_KEY),
+      AsyncStorage.getItem(SELECTED_STORAGE_KEY),
+    ]).then(([savedRaw, selectedRaw]) => {
+      if (!active) return;
+      let ids: string[] = [];
+      if (savedRaw) {
+        const parsed: unknown = JSON.parse(savedRaw);
+        if (Array.isArray(parsed)) ids = parsed.filter((id): id is string => typeof id === 'string' && WORLD_CLOCK_CITIES.some((city) => city.id === id));
+      }
+      setSavedIds(ids);
+      const remembered = selectedRaw && ids.includes(selectedRaw) ? selectedRaw : ids[0] ?? null;
+      setSelectedId(remembered);
+    }).catch(() => {}).finally(() => { if (active) setLoaded(true); });
     return () => { active = false; };
   }, []);
 
   useEffect(() => {
-    if (loaded) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(savedIds)).catch(() => {});
-  }, [loaded, savedIds]);
+    if (!loaded) return;
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(savedIds)).catch(() => {});
+    if (selectedId) AsyncStorage.setItem(SELECTED_STORAGE_KEY, selectedId).catch(() => {});
+    else AsyncStorage.removeItem(SELECTED_STORAGE_KEY).catch(() => {});
+  }, [loaded, savedIds, selectedId]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -40,94 +53,170 @@ export default function WorldClockScreen() {
     () => savedIds.map((id) => WORLD_CLOCK_CITIES.find((city) => city.id === id)).filter((city): city is WorldClockCity => Boolean(city)),
     [savedIds]
   );
-  const results = useMemo(() => {
-    const search = query.trim().toLocaleLowerCase();
-    if (!search) return [];
-    return WORLD_CLOCK_CITIES.filter((city) => !savedIds.includes(city.id) && `${city.name} ${city.region} ${city.timeZone}`.toLocaleLowerCase().includes(search));
-  }, [query, savedIds]);
+  const selectedCity = savedCities.find((city) => city.id === selectedId) ?? null;
+  const searchResults = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    const cities = needle
+      ? WORLD_CLOCK_CITIES.filter((city) => `${city.name} ${city.country} ${city.timeZone}`.toLocaleLowerCase().includes(needle))
+      : savedCities;
+    return cities;
+  }, [query, savedCities]);
 
-  const addCity = (city: WorldClockCity) => {
-    setSavedIds((current) => [...current, city.id]);
+  const changeCity = useCallback((direction: -1 | 1) => {
+    if (!savedCities.length) {
+      setPickerVisible(true);
+      return;
+    }
+    const index = savedCities.findIndex((city) => city.id === selectedId);
+    const nextIndex = (index + direction + savedCities.length) % savedCities.length;
+    setSelectedId(savedCities[nextIndex].id);
+  }, [savedCities, selectedId]);
+
+  const panResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_event, gesture) => Math.abs(gesture.dx) > 28 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+    onPanResponderRelease: (_event, gesture) => {
+      if (gesture.dx < -45) changeCity(1);
+      if (gesture.dx > 45) changeCity(-1);
+    },
+  }), [changeCity]);
+
+  const selectCity = (city: WorldClockCity) => {
+    setSavedIds((ids) => ids.includes(city.id) ? ids : [...ids, city.id]);
+    setSelectedId(city.id);
     setQuery('');
+    setPickerVisible(false);
   };
 
+  const removeCity = (city: WorldClockCity) => {
+    const next = savedCities.filter((item) => item.id !== city.id);
+    setSavedIds(next.map((item) => item.id));
+    if (selectedId === city.id) {
+      setSelectedId(next[0]?.id ?? null);
+      if (!next.length) setPickerVisible(true);
+    }
+  };
+
+  const timeFontSize = Math.max(20, Math.min(width / 6, 300));
+  const footerDate = selectedCity
+    ? new Intl.DateTimeFormat(undefined, { timeZone: selectedCity.timeZone, weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' }).format(now).toUpperCase()
+    : '';
+  const footerText = selectedCity ? `${selectedCity.country.toUpperCase()} - ${footerDate}` : 'SELECT A CITY';
+
   return (
-    <ClockToolLayout title="WORLD CLOCK" subtitle="LOCAL TIMES AROUND THE WORLD">
-      <View style={styles.content}>
-        <View style={styles.searchBlock}>
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search city or time zone"
-            placeholderTextColor="rgba(255,255,255,0.36)"
-            autoCapitalize="words"
-            style={styles.search}
-            accessibilityLabel="Search cities and time zones"
-          />
-          {query.trim() ? (
-            <ScrollView style={styles.results} keyboardShouldPersistTaps="handled">
-              {results.length ? results.map((city) => (
-                <Pressable key={city.id} onPress={() => addCity(city)} style={styles.result} accessibilityRole="button">
-                  <View><Text style={styles.cityName}>{city.name}</Text><Text style={styles.region}>{city.region}</Text></View>
-                  <Text style={styles.add}>ADD +</Text>
-                </Pressable>
-              )) : <Text style={styles.noResults}>No matching cities in the offline catalog.</Text>}
-            </ScrollView>
-          ) : null}
+    <ClockToolLayout
+      title="WORLD CLOCK"
+      subtitle={selectedCity?.name.toUpperCase() ?? 'CHOOSE A CITY'}
+      footer={<Text numberOfLines={1} adjustsFontSizeToFit style={[styles.footer, { fontSize: Math.max(10, Math.min(16, width * 0.019)), color, textShadowColor: color }]}>{footerText}</Text>}
+      actions={(
+        <Pressable onPress={() => { setQuery(''); setPickerVisible(true); }} accessibilityRole="button" accessibilityLabel="Choose or manage cities" style={styles.headerAction}>
+          <Text style={styles.headerActionText}>CITIES</Text>
+        </Pressable>
+      )}
+      renderFace={({ fontSize }) => (
+        <View {...panResponder.panHandlers} style={styles.faceContent}>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[toolStyles.time, { fontSize: Math.min(fontSize, timeFontSize), color, textShadowColor: color }]}>
+            {selectedCity ? now.toLocaleTimeString(undefined, { timeZone: selectedCity.timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: !use24Hour }) : '--:--:--'}
+          </Text>
+          {savedCities.length > 1 ? <Text style={styles.hint}>SWIPE TO CHANGE CITY</Text> : null}
         </View>
-        <View style={styles.clockList}>
-          {savedCities.length === 0 ? (
-            <Text style={styles.empty}>SEARCH FOR A CITY TO ADD A CLOCK</Text>
-          ) : (
-            <FlatList
-              data={savedCities}
-              keyExtractor={(city) => city.id}
-              renderItem={({ item }) => <CityRow city={item} now={now} onRemove={() => setSavedIds((ids) => ids.filter((id) => id !== item.id))} />}
-              initialNumToRender={8}
-              windowSize={5}
-              contentContainerStyle={styles.listContent}
-            />
-          )}
-        </View>
-      </View>
+      )}
+    >
+      <CityPickerDialog
+        visible={pickerVisible}
+        query={query}
+        results={searchResults}
+        savedIds={savedIds}
+        onQueryChange={setQuery}
+        onSelect={selectCity}
+        onRemove={removeCity}
+        onClose={() => setPickerVisible(false)}
+      />
     </ClockToolLayout>
   );
 }
 
-function CityRow({ city, now, onRemove }: { city: WorldClockCity; now: Date; onRemove: () => void }) {
-  const time = now.toLocaleTimeString(undefined, { timeZone: city.timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-  const date = new Intl.DateTimeFormat(undefined, { timeZone: city.timeZone, weekday: 'short', month: 'short', day: 'numeric' }).format(now).toUpperCase();
-  const zone = new Intl.DateTimeFormat(undefined, { timeZone: city.timeZone, timeZoneName: 'short' }).formatToParts(now).find((part) => part.type === 'timeZoneName')?.value ?? city.timeZone;
+function CityPickerDialog({
+  visible, query, results, savedIds, onQueryChange, onSelect, onRemove, onClose,
+}: {
+  visible: boolean;
+  query: string;
+  results: WorldClockCity[];
+  savedIds: string[];
+  onQueryChange: (value: string) => void;
+  onSelect: (city: WorldClockCity) => void;
+  onRemove: (city: WorldClockCity) => void;
+  onClose: () => void;
+}) {
   return (
-    <View style={styles.cityRow}>
-      <View style={styles.cityMeta}>
-        <Text style={styles.cityName}>{city.name}</Text>
-        <Text style={styles.region}>{date} · {zone}</Text>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.dialog}>
+          <View style={styles.dialogHeader}>
+            <View>
+              <Text style={styles.dialogTitle}>WORLD CLOCKS</Text>
+              <Text style={styles.dialogSubtitle}>SELECT OR ADD A CITY</Text>
+            </View>
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close city picker" style={styles.closeButton}>
+              <Text style={styles.closeText}>DONE</Text>
+            </Pressable>
+          </View>
+          <TextInput
+            value={query}
+            onChangeText={onQueryChange}
+            placeholder="Search city, country, or time zone"
+            placeholderTextColor="rgba(255,255,255,0.38)"
+            autoCapitalize="words"
+            style={styles.search}
+            accessibilityLabel="Search cities and time zones"
+          />
+          <ScrollView style={styles.cityList} keyboardShouldPersistTaps="handled">
+            {results.length ? results.map((city) => {
+              const saved = savedIds.includes(city.id);
+              return (
+                <View key={city.id} style={styles.cityRow}>
+                  <Pressable onPress={() => onSelect(city)} style={styles.citySelect} accessibilityRole="button">
+                    <Text style={styles.cityName}>{city.name}</Text>
+                    <Text style={styles.country}>{city.country} · {city.timeZone}</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => saved ? onRemove(city) : onSelect(city)}
+                    accessibilityRole="button"
+                    accessibilityLabel={saved ? `Remove ${city.name}` : `Add ${city.name}`}
+                    style={styles.cityAction}
+                  >
+                    <Text style={[styles.cityActionText, saved && styles.removeText]}>{saved ? 'REMOVE' : 'ADD +'}</Text>
+                  </Pressable>
+                </View>
+              );
+            }) : <Text style={styles.noResults}>No matching cities in the offline list.</Text>}
+          </ScrollView>
+        </View>
       </View>
-      <Text style={styles.time}>{time}</Text>
-      <Pressable onPress={onRemove} accessibilityRole="button" accessibilityLabel={`Remove ${city.name}`} style={styles.remove}>
-        <Text style={styles.removeText}>×</Text>
-      </Pressable>
-    </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { width: '100%', flex: 1, maxWidth: 760, alignSelf: 'center' },
-  searchBlock: { zIndex: 2 },
-  search: { height: 42, borderWidth: 1, borderColor: toolColors.line, paddingHorizontal: 13, color: '#FFFFFF', fontSize: 12, backgroundColor: '#080808' },
-  results: { maxHeight: 190, borderWidth: 1, borderTopWidth: 0, borderColor: toolColors.line, backgroundColor: '#090909' },
-  result: { minHeight: 48, paddingHorizontal: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
-  add: { color: toolColors.accent, fontSize: 9, fontWeight: '700', letterSpacing: 1 },
-  noResults: { color: toolColors.muted, fontSize: 11, padding: 14 },
-  clockList: { flex: 1, marginTop: 12, borderTopWidth: 1, borderTopColor: toolColors.line },
-  listContent: { paddingBottom: 8 },
-  empty: { color: 'rgba(255,255,255,0.35)', fontSize: 9, textAlign: 'center', letterSpacing: 1.5, marginTop: 24 },
-  cityRow: { minHeight: 62, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.09)', paddingHorizontal: 4 },
-  cityMeta: { flex: 1 },
-  cityName: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', letterSpacing: 0.6 },
-  region: { color: toolColors.muted, fontSize: 9, marginTop: 4, letterSpacing: 0.4 },
-  time: { color: toolColors.accent, fontFamily: 'DSEG7Classic-BoldItalic', fontSize: 20, fontVariant: ['tabular-nums'], marginHorizontal: 12 },
-  remove: { width: 34, height: 38, alignItems: 'center', justifyContent: 'center' },
-  removeText: { color: 'rgba(255,255,255,0.55)', fontSize: 23 },
+  faceContent: { width: '100%', alignItems: 'center', paddingHorizontal: 8 },
+  hint: { color: 'rgba(255,255,255,0.4)', fontSize: 9, letterSpacing: 1.5, marginTop: 18 },
+  footer: { color: toolColors.accent, fontFamily: 'DSEG14Classic-Italic', letterSpacing: 1.2, textAlign: 'center', textShadowColor: toolColors.accent, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 7 },
+  headerAction: { minWidth: 72, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: toolColors.line },
+  headerActionText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700', letterSpacing: 1 },
+  modalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 18, backgroundColor: 'rgba(0,0,0,0.86)' },
+  dialog: { width: '100%', maxWidth: 620, maxHeight: '86%', padding: 20, borderWidth: 1, borderColor: 'rgba(230,230,0,0.52)', backgroundColor: '#090909' },
+  dialogHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  dialogTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', letterSpacing: 1.8 },
+  dialogSubtitle: { color: toolColors.muted, fontSize: 8, letterSpacing: 1, marginTop: 4 },
+  closeButton: { minWidth: 72, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: toolColors.line },
+  closeText: { color: toolColors.accent, fontSize: 9, fontWeight: '700', letterSpacing: 1 },
+  search: { height: 42, borderWidth: 1, borderColor: toolColors.line, paddingHorizontal: 12, color: '#FFFFFF', fontSize: 11, backgroundColor: '#050505' },
+  cityList: { marginTop: 10, minHeight: 150 },
+  cityRow: { minHeight: 52, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
+  citySelect: { flex: 1, justifyContent: 'center', minHeight: 50 },
+  cityName: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
+  country: { color: toolColors.muted, fontSize: 8, marginTop: 4 },
+  cityAction: { minWidth: 68, minHeight: 40, alignItems: 'center', justifyContent: 'center' },
+  cityActionText: { color: toolColors.accent, fontSize: 8, fontWeight: '700', letterSpacing: 1 },
+  removeText: { color: '#FF7777' },
+  noResults: { color: toolColors.muted, fontSize: 10, paddingVertical: 18, textAlign: 'center' },
 });
