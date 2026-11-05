@@ -47,51 +47,100 @@ export function VideoSplashScreen({ onFinish }: VideoSplashScreenProps) {
     instance.loop = false;
     // Standard web browsers block unmuted autoplay without prior user gesture;
     // Electron desktop and native Android/iOS allow unmuted playback on launch.
-    instance.muted = Platform.OS === 'web' && !isElectronEnvironment();
-    instance.play();
+    const isWebBrowser = Platform.OS === 'web' && !isElectronEnvironment();
+    if (isWebBrowser) {
+      instance.muted = true;
+      instance.volume = 0;
+    }
+    try {
+      instance.play();
+    } catch {
+      // Ignore initial play error if DOM isn't ready
+    }
   });
 
   useEventListener(player, 'playToEnd', () => {
     finishSplash();
   });
 
-  useEventListener(player, 'statusChange', ({ status }) => {
+  useEventListener(player, 'statusChange', ({ status, error }) => {
     if (status === 'error') {
+      const msg = error?.message || '';
+      // On Web, React dev mode (StrictMode) or fast refresh unmounts/remounts the video DOM element,
+      // which causes browsers to reject the pending play() promise with AbortError.
+      // This is non-fatal: do not prematurely destroy the splash screen.
+      if (msg.includes('AbortError') || msg.includes('interrupted')) {
+        setTimeout(() => {
+          if (!hasFinishedRef.current) {
+            try {
+              player.play();
+            } catch {
+              // Ignore
+            }
+          }
+        }, 150);
+        return;
+      }
       finishSplash();
     } else if (status === 'readyToPlay' && !player.playing && !hasFinishedRef.current) {
-      player.play();
+      try {
+        player.play();
+      } catch {
+        // Ignore
+      }
     }
   });
 
   useEffect(() => {
-    // On Web, VideoView mounts the underlying <video> element in its own useEffect
-    // before this parent effect runs, so calling player.play() here starts web playback reliably.
-    try {
-      player.play();
-    } catch {
-      // Ignore if already playing
-    }
+    let isMounted = true;
 
-    const timer = setTimeout(() => {
-      finishSplash();
+    // Small delay allows VideoView's DOM element on web to be fully attached
+    const playTimer = setTimeout(() => {
+      if (isMounted && !hasFinishedRef.current) {
+        try {
+          player.play();
+        } catch {
+          // Ignore
+        }
+      }
+    }, 50);
+
+    const fallbackTimer = setTimeout(() => {
+      if (isMounted) {
+        finishSplash();
+      }
     }, FALLBACK_TIMEOUT_MS);
 
     return () => {
-      clearTimeout(timer);
+      isMounted = false;
+      clearTimeout(playTimer);
+      clearTimeout(fallbackTimer);
     };
   }, [finishSplash, player]);
 
+  const handleContainerPress = () => {
+    if (!player.playing && !hasFinishedRef.current) {
+      try {
+        player.play();
+      } catch {
+        // Ignore
+      }
+    }
+  };
+
   return (
     <Animated.View style={[styles.container, { opacity }]}>
-      <VideoView
-        player={player}
-        style={styles.video}
-        contentFit="contain"
-        nativeControls={false}
-        allowsPictureInPicture={false}
-        fullscreenOptions={{ enable: false }}
-        playsInline
-      />
+      <Pressable onPress={handleContainerPress} style={styles.videoTouchable}>
+        <VideoView
+          player={player}
+          style={styles.video}
+          contentFit="contain"
+          nativeControls={false}
+          allowsPictureInPicture={false}
+          fullscreenOptions={{ enable: false }}
+          playsInline
+        />
+      </Pressable>
 
       <View style={styles.bottomBar}>
         <Pressable
@@ -120,6 +169,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 999,
   },
+  videoTouchable: {
+    width: '100%',
+    height: '100%',
+  },
   video: {
     width: '100%',
     height: '100%',
@@ -132,15 +185,22 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   skipButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 8,
+    borderColor: 'rgba(255, 255, 255, 0.24)',
+    borderRadius: 0,
     paddingHorizontal: 14,
     paddingVertical: 7,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      } as Record<string, unknown>,
+    }),
   },
   skipButtonPressed: {
     opacity: 0.6,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
   },
   skipText: {
     color: 'rgba(255, 255, 255, 0.75)',

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useKeepAwake } from 'expo-keep-awake';
 import {
   COLOR_PRESETS,
@@ -11,6 +12,7 @@ import { useSystemClock } from '@/hooks/useSystemClock';
 import { DigitalClockDisplay } from '@/components/DigitalClockDisplay';
 import { StartupConfigModal } from '@/components/StartupConfigModal';
 import { VideoSplashScreen } from '@/components/VideoSplashScreen';
+import { ToolPickerModal } from '@/components/ToolPickerModal';
 
 interface ElectronBridge {
   toggleFullscreen: () => Promise<boolean>;
@@ -59,12 +61,42 @@ export default function ClockScreen() {
   const [isInitialStartup, setIsInitialStartup] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [controlsVisible, setControlsVisible] = useState<boolean>(true);
+  const [toolPickerVisible, setToolPickerVisible] = useState(false);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   const hideControlsTimeout = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
 
   const clock = useSystemClock(use24Hour);
+
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem('digiclock.preferences')
+      .then((raw) => {
+        if (!active || !raw) return;
+        const saved = JSON.parse(raw) as { color?: unknown; use24Hour?: unknown };
+        if (!params.color && typeof saved.color === 'string' && isValidHexColor(saved.color)) {
+          setSelectedColor(saved.color.toUpperCase());
+        }
+        if (!params.format && typeof saved.use24Hour === 'boolean') {
+          setUse24Hour(saved.use24Hour);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setPreferencesLoaded(true);
+      });
+    return () => { active = false; };
+  }, [params.color, params.format]);
+
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+    AsyncStorage.setItem(
+      'digiclock.preferences',
+      JSON.stringify({ color: selectedColor, use24Hour })
+    ).catch(() => {});
+  }, [preferencesLoaded, selectedColor, use24Hour]);
 
   const resetAutoHideTimer = useCallback(() => {
     setControlsVisible(true);
@@ -194,9 +226,19 @@ export default function ClockScreen() {
         controlsVisible={controlsVisible}
         onScreenInteract={resetAutoHideTimer}
         onOpenSettings={() => setConfigModalVisible(true)}
+        onOpenTools={() => setToolPickerVisible(true)}
         onToggle24Hour={handleToggle24Hour}
         onCycleColor={handleCycleColor}
         onToggleFullscreen={toggleBrowserFullscreen}
+      />
+
+      <ToolPickerModal
+        visible={toolPickerVisible}
+        onClose={() => setToolPickerVisible(false)}
+        onSelect={(path) => {
+          setToolPickerVisible(false);
+          router.push(path as Href);
+        }}
       />
 
       <StartupConfigModal

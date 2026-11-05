@@ -17,6 +17,7 @@ interface DigitalClockDisplayProps {
   controlsVisible: boolean;
   onScreenInteract: () => void;
   onOpenSettings: () => void;
+  onOpenTools: () => void;
   onToggle24Hour: () => void;
   onCycleColor: () => void;
   onToggleFullscreen: () => void;
@@ -30,6 +31,7 @@ export function DigitalClockDisplay({
   controlsVisible,
   onScreenInteract,
   onOpenSettings,
+  onOpenTools,
   onToggle24Hour,
   onCycleColor,
   onToggleFullscreen,
@@ -97,6 +99,16 @@ export function DigitalClockDisplay({
               </Text>
             </Pressable>
           )}
+
+          <Pressable
+            onPress={onOpenTools}
+            style={({ pressed }) => [
+              styles.controlChip,
+              pressed && styles.chipPressed,
+            ]}
+          >
+            <Text style={styles.controlText}>TOOLS</Text>
+          </Pressable>
 
           <Pressable
             onPress={onOpenSettings}
@@ -172,20 +184,27 @@ const styles = StyleSheet.create({
   controlChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.07)",
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderColor: "rgba(255, 255, 255, 0.22)",
+    borderRadius: 0,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    ...Platform.select({
+      web: {
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+      } as Record<string, unknown>,
+    }),
   },
   chipPressed: {
     opacity: 0.6,
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
   },
   colorDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: 0,
     marginRight: 6,
   },
   controlText: {

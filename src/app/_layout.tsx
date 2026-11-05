@@ -6,6 +6,17 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as Device from 'expo-device';
 import * as ScreenOrientation from 'expo-screen-orientation';
+import * as Notifications from 'expo-notifications';
+import { TimerProvider } from '@/providers/TimerProvider';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 // Keep native OS splash screen visible until custom fonts and video splash mount
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -73,12 +84,14 @@ export default function RootLayout() {
   return (
     <View style={styles.root}>
       <StatusBar hidden style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#000000' },
-        }}
-      />
+      <TimerProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: '#000000' },
+          }}
+        />
+      </TimerProvider>
     </View>
   );
 }
