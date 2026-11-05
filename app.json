@@ -20,6 +20,9 @@
     },
     "android": {
       "package": "com.godswill.digiclock",
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
       "icon": "./assets/icon.png",
       "adaptiveIcon": {
         "backgroundColor": "#17181B",
@@ -38,6 +41,12 @@
       "expo-status-bar",
       "expo-font",
       "expo-video",
+      [
+        "expo-notifications",
+        {
+          "enableRemoteNotifications": false
+        }
+      ],
       [
         "expo-splash-screen",
         {

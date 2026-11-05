@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, powerSaveBlocker } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, powerSaveBlocker } = require('electron');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -9,6 +9,9 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 let mainWindow = null;
 let powerBlockerId = null;
 let staticServer = null;
+let timerNotificationTimeout = null;
+let timerNotificationId = 0;
+let activeTimerNotificationId = null;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -177,6 +180,32 @@ ipcMain.handle('set-fullscreen', (_event, value) => {
 
 ipcMain.handle('is-fullscreen', () => {
   return mainWindow ? mainWindow.isFullScreen() : false;
+});
+
+ipcMain.handle('schedule-timer-notification', (_event, targetTimeMs) => {
+  if (timerNotificationTimeout) clearTimeout(timerNotificationTimeout);
+  const id = String(++timerNotificationId);
+  activeTimerNotificationId = id;
+  const delay = Math.max(1000, (Number(targetTimeMs) || Date.now() + 1000) - Date.now());
+  timerNotificationTimeout = setTimeout(() => {
+    timerNotificationTimeout = null;
+    activeTimerNotificationId = null;
+    if (Notification.isSupported()) {
+      new Notification({
+        title: "Time's up",
+        body: 'Your DigiClock timer has finished.',
+      }).show();
+    }
+  }, delay);
+  return id;
+});
+
+ipcMain.on('cancel-timer-notification', (_event, id) => {
+  if (timerNotificationTimeout && String(id) === activeTimerNotificationId) {
+    clearTimeout(timerNotificationTimeout);
+    timerNotificationTimeout = null;
+    activeTimerNotificationId = null;
+  }
 });
 
 app.whenReady().then(async () => {
