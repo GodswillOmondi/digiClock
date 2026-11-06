@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollViewInstance, type ViewStyle } from 'react-native';
+import { useAudioPlayer } from 'expo-audio';
 import { ClockToolLayout, toolColors, toolStyles } from '@/components/ClockToolLayout';
 import { useTimer } from '@/providers/TimerProvider';
 import { useSystemClock } from '@/hooks/useSystemClock';
@@ -29,8 +30,17 @@ export default function TimerScreen() {
   const [seconds, setSeconds] = useState(() => initialSeconds % 60);
   const [configurationVisible, setConfigurationVisible] = useState(status === 'idle');
   const { color, use24Hour } = useClockPreferences();
+  const snapAudioPlayer = useAudioPlayer(require('../../assets/audio/gear-snap.wav'));
   const durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
   const systemClock = useSystemClock(use24Hour);
+
+  const playSnapSound = useCallback(() => {
+    try {
+      void snapAudioPlayer.seekTo(0).then(() => snapAudioPlayer.play()).catch(() => {});
+    } catch {
+      // Keep the wheel usable if audio playback is unavailable.
+    }
+  }, [snapAudioPlayer]);
 
   const startTimer = () => {
     if (durationMs <= 0) return;
@@ -86,6 +96,7 @@ export default function TimerScreen() {
         onHoursChange={setHours}
         onMinutesChange={setMinutes}
         onSecondsChange={setSeconds}
+        onSnap={playSnapSound}
         onStart={startTimer}
         onCancel={() => setConfigurationVisible(false)}
       />
@@ -94,7 +105,7 @@ export default function TimerScreen() {
 }
 
 function TimerConfigurationDialog({
-  visible, hours, minutes, seconds, onHoursChange, onMinutesChange, onSecondsChange, onStart, onCancel,
+  visible, hours, minutes, seconds, onHoursChange, onMinutesChange, onSecondsChange, onSnap, onStart, onCancel,
 }: {
   visible: boolean;
   hours: number;
@@ -103,6 +114,7 @@ function TimerConfigurationDialog({
   onHoursChange: (value: number) => void;
   onMinutesChange: (value: number) => void;
   onSecondsChange: (value: number) => void;
+  onSnap: () => void;
   onStart: () => void;
   onCancel: () => void;
 }) {
@@ -113,11 +125,11 @@ function TimerConfigurationDialog({
           <Text style={styles.dialogTitle}>SET TIMER</Text>
           <Text style={styles.dialogSubtitle}>SCROLL TO CHOOSE A DURATION</Text>
           <View style={styles.wheels}>
-            <WheelColumn value={hours} maximum={99} label="HOURS" onChange={onHoursChange} />
+            <WheelColumn value={hours} maximum={99} label="HOURS" onChange={onHoursChange} onSnap={onSnap} />
             <Text style={styles.colon}>:</Text>
-            <WheelColumn value={minutes} maximum={59} label="MINUTES" onChange={onMinutesChange} />
+            <WheelColumn value={minutes} maximum={59} label="MINUTES" onChange={onMinutesChange} onSnap={onSnap} />
             <Text style={styles.colon}>:</Text>
-            <WheelColumn value={seconds} maximum={59} label="SECONDS" onChange={onSecondsChange} />
+            <WheelColumn value={seconds} maximum={59} label="SECONDS" onChange={onSecondsChange} onSnap={onSnap} />
           </View>
           <View style={styles.dialogButtons}>
             <ToolButton label="CANCEL" secondary onPress={onCancel} />
@@ -129,11 +141,12 @@ function TimerConfigurationDialog({
   );
 }
 
-function WheelColumn({ value, maximum, label, onChange }: { value: number; maximum: number; label: string; onChange: (value: number) => void }) {
+function WheelColumn({ value, maximum, label, onChange, onSnap }: { value: number; maximum: number; label: string; onChange: (value: number) => void; onSnap: () => void }) {
   const values = useMemo(() => Array.from({ length: maximum + 1 }, (_, index) => index), [maximum]);
   const [activeIndex, setActiveIndex] = useState(value);
   const lastReportedIndexRef = useRef(value);
   const scrollRef = useRef<ScrollViewInstance>(null);
+
   const reportCenteredValue = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offset = event.nativeEvent.contentOffset.y;
     const nextIndex = Math.max(0, Math.min(maximum, Math.round(offset / WHEEL_ITEM_HEIGHT)));
@@ -141,6 +154,7 @@ function WheelColumn({ value, maximum, label, onChange }: { value: number; maxim
     lastReportedIndexRef.current = nextIndex;
     setActiveIndex(nextIndex);
     onChange(nextIndex);
+    onSnap();
   };
 
   return (
